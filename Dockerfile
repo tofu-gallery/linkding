@@ -6,8 +6,9 @@
 # collects the static files. Left out: the SQLite ICU extension (a copy keeps its data in PostgreSQL), the health check
 # (Tofu checks the address itself), uv's install script (uv comes from PyPI, pinned) and the "plus" image's Chromium.
 # Its settings are bookmarks/settings/tofu.py (upstream's production settings, then Tofu's). tofu-entrypoint.sh applies
-# the migrations, then starts the web server and the background tasks on PORT, as root (uwsgi's workers then run as
-# www-data, as upstream's uwsgi.ini says).
+# the migrations, then starts the web server and the background tasks; the container runs as root (no USER line). uwsgi's
+# master starts as root and, with UWSGI_DROP_AFTER_INIT below, binds PORT before it drops to www-data (upstream's
+# uwsgi.ini), so linkding itself, uwsgi's workers and its HTTP router run as www-data, and so do the background tasks.
 FROM node:22-alpine AS node-build
 WORKDIR /etc/linkding
 COPY package.json package-lock.json ./
@@ -43,6 +44,11 @@ ENV VIRTUAL_ENV=/etc/linkding/.venv \
     PYTHONUNBUFFERED=1 \
     DJANGO_SETTINGS_MODULE=bookmarks.settings.tofu \
     UWSGI_MAX_FD=4096
+# uwsgi reads UWSGI_* variables as options. Without drop-after-init its master drops to www-data (uwsgi.ini's uid and
+# gid) before its HTTP router binds PORT, and www-data cannot bind port 80, Tofu's default: uwsgi would exit and nothing
+# would answer. With it, the master binds PORT and its internal socket as root, then drops to www-data before it loads
+# linkding.
+ENV UWSGI_DROP_AFTER_INIT=true
 # Upstream's .dockerignore already leaves out the development settings; removing them here too makes sure that
 # bookmarks.settings can never fall back to them (DEBUG on).
 RUN rm -f bookmarks/settings/dev.py && \
