@@ -1,5 +1,8 @@
+import os
+
 from django.conf import settings
 from django.contrib.auth import views as auth_views
+from django.contrib.auth.models import User
 
 from bookmarks.widgets import FormErrorList
 
@@ -20,6 +23,12 @@ class LinkdingLoginView(auth_views.LoginView):
 
         context["enable_oidc"] = settings.LD_ENABLE_OIDC
         context["disable_login"] = settings.LD_DISABLE_LOGIN_FORM
+        # Tofu (2026-10-25): see LD_INITIAL_SUPERUSER_HINT in settings/base.py.
+        context["initial_superuser_hint"] = (
+            settings.LD_INITIAL_SUPERUSER_HINT and not User.objects.exists()
+        )
+        # The name tofu-entrypoint.sh gives the first account
+        context["initial_superuser_name"] = os.getenv("LD_SUPERUSER_NAME") or "admin"
         return context
 
     def form_invalid(self, form):

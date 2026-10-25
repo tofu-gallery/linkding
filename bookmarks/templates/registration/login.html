@@ -8,6 +8,17 @@
     <div class="section-header">
       <h1 id="main-heading">Login</h1>
     </div>
+    {# Tofu (2026-10-25): see LD_INITIAL_SUPERUSER_HINT in settings/base.py #}
+    {% if initial_superuser_hint %}
+      <div class="toast mb-4" role="status">
+        <p>This linkding has no account yet.</p>
+        <p class="mt-2">
+          If it is your copy on Tofu, open its <b>Keys &amp; settings</b> page there and save a password named
+          <code>LD_SUPERUSER_PASSWORD</code>, with <b>Hide this value after saving</b> on. Then deploy the app again
+          and sign in here with the username <code>{{ initial_superuser_name }}</code> and that password.
+        </p>
+      </div>
+    {% endif %}
     {% if not disable_login %}
       <form method="post" action="{% url 'login' %}">
         {% csrf_token %}
