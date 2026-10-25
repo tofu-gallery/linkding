@@ -3,7 +3,7 @@
 This repository is Tofu's copy of **sissbruecker/linkding** (licence: MIT), listed in Tofu's app gallery as **private bookmarks**: linkding, where you keep your own bookmarks with tags, notes and an unread mark, search them, save searches as bundles, and add to them from a browser extension, a bookmarklet or its REST API.
 
 - `master` mirrors the upstream repository and is never committed to by Tofu.
-- `tofu` carries Tofu's own changes; tags named `pin/<date>` mark the versions the gallery points to. The current pin is `pin/2026-10-25.1`.
+- `tofu` carries Tofu's own changes; tags named `pin/<date>` mark the versions the gallery points to. The current pin is `pin/2026-10-25.2`.
 - A visitor who chooses this app gets a private snapshot of the pinned version in their own Tofu account. Their copy does not follow upstream updates.
 - Upstream: https://github.com/sissbruecker/linkding at `27b7303baf41bb28babc610ac8eaa486e1ddfab5` (2026-09-13, v1.47.0).
 
@@ -108,6 +108,19 @@ Nothing upstream was removed. Tofu's safety check has no finding on the reposito
 - The linkding name and logo belong to the upstream project; the gallery uses them only to say which app this is.
 
 ## Verification
+
+### `pin/2026-10-25.2`
+
+2026-10-25, on macOS arm64 against 127.0.0.1 only. No Docker, nothing deployed, nothing run as root. This version changes the login page (`bookmarks/views/auth.py`, `login.html`), two comments in the settings, Tofu's tests and this file; what is under the earlier pins below still describes the rest.
+
+- Tests (`pytest -n 6 bookmarks/tests`, upstream's test settings, the packages of this `uv.lock` with its test tools, without uwsgi): 1,395 passed, upstream's 1,380 and `test_tofu_switches.py`'s 15. The two new tests (the notice until somebody signs in, through a mistyped password and a sign-in; a saved `LD_SUPERUSER_NAME` never shown) failed on `pin/2026-10-25.1`'s login code, which showed the bare form.
+- Django's release notes for 6.0.8 and 6.0.9, read for "What Tofu changes", checked against linkding with `django.setup()` on its settings: `LocaleMiddleware` is on, and Django parses every request's `Content-Type` with `parse_header_parameters`; no installed model has a `URLField`; no route leads to `set_language` (the one i18n route is the admin's `jsi18n`); the admin has no `list_editable`, and its one inline, `UserProfile`, has an automatic `AutoField` key.
+- Built as for `pin/2026-10-25`, from a `git archive` of `fe45fad` with every execute bit removed (0 executable files): `npm ci`, `npm run build`, `uv sync --frozen --no-dev --group postgres` (28 packages; uwsgi and psycopg-c compiled), `collectstatic --noinput` (178 files).
+- The image's `CMD` as an ordinary user (the copy of `supervisord-all.conf` without `user=` lines, as before), with the image's environment, on a new database of a scratch PostgreSQL 14.24 cluster with Supabase-like `anon` and `authenticated` roles holding the old default privileges. First start, nothing set: 76 migrations, `Turned on row-level security for 21 of linkding's tables for Supabase's Data API`, `Skip creating initial superuser, LD_SUPERUSER_NAME option is not defined`, uwsgi bound and serving; the login page said "This linkding has no account yet" with the username `admin`. Second start with a throwaway `LD_SUPERUSER_PASSWORD`, as an owner who saves it before first opening the copy: `No migrations to apply.`, `Created initial superuser`, and the login page said "Nobody has signed in to this linkding yet", the username `admin` (or the `LD_SUPERUSER_NAME` you saved), `LD_SUPERUSER_PASSWORD`, and the way back for a password that does not work.
+- Headless Chromium (Playwright) against that run, 127.0.0.1 only (no request to another host was made): a mistyped password answered 401 with "Your username and password didn't match" and the notice still above the form; the right password signed in to `/bookmarks`; after signing out, the login page was upstream's form alone, with no notice and no mention of `admin` or `LD_SUPERUSER_*`. No page error; the one console error was the browser's report of that 401. The database then held `admin` with a last login.
+- Tofu's own check on `tofu` at `fe45fad`, the last commit before this file's update: `detect=container files= 448 published= 417 -> not on the static lane | refused: typex264, server_codex4, configurationx6 | build: not_vite | safety ok (0 findings)`, `free static limit: 417/500 published files | archive 200 3405196`.
+- Not run here: the image itself (no Docker on this machine), a real root, Tofu's transaction pooler and anything on Tofu.
+- Every local server was stopped, and the scratch database cluster and the build output were deleted afterwards.
 
 ### `pin/2026-10-25.1`
 
