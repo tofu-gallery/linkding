@@ -13,6 +13,8 @@
 !/scripts/setup-ublock.sh
 !/supervisord-tasks.conf
 !/supervisord-all.conf
+# Tofu (2026-10-25): the start script of Tofu's image (Dockerfile)
+!/tofu-entrypoint.sh
 !/uv.lock
 !/uwsgi.ini
 !/version.txt
