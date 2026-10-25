@@ -50,7 +50,12 @@ if _database_url and not os.getenv("LD_DB_ENGINE"):
                 "CONN_HEALTH_CHECKS": True,
             }
         }
-        __all__ += ["DATABASES"]
+        # base.py decides these from the database it configured (SQLite without LD_DB_ENGINE); enable_wal and the
+        # title sort read them.
+        LD_DB_ENGINE = "postgres"
+        USE_SQLITE = False
+        USE_SQLITE_ICU_EXTENSION = False
+        __all__ += ["DATABASES", "LD_DB_ENGINE", "USE_SQLITE", "USE_SQLITE_ICU_EXTENSION"]
 
 # Upstream keeps its secret key in data/secretkey.txt, and a copy has no lasting disk: every restart would make a new
 # key and sign everyone out. So the key is LD_SECRET_KEY when the owner saves one as a hidden value, and otherwise the
