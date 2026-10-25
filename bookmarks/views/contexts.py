@@ -597,9 +597,9 @@ class BookmarkDetailsContext:
             and not settings.LD_DISABLE_PREVIEW_IMAGES
         )
         self.show_link_icons = (
-            user_profile.enable_favicons
+            not settings.LD_DISABLE_FAVICONS
+            and user_profile.enable_favicons
             and bookmark.favicon_file
-            and not settings.LD_DISABLE_FAVICONS
         )
         self.snapshots_enabled = settings.LD_ENABLE_SNAPSHOTS
         self.uploads_enabled = not settings.LD_DISABLE_ASSET_UPLOAD
