@@ -23,9 +23,15 @@ class LinkdingLoginView(auth_views.LoginView):
 
         context["enable_oidc"] = settings.LD_ENABLE_OIDC
         context["disable_login"] = settings.LD_DISABLE_LOGIN_FORM
-        # Tofu (2026-10-25): see LD_INITIAL_SUPERUSER_HINT in settings/base.py.
-        context["initial_superuser_hint"] = (
-            settings.LD_INITIAL_SUPERUSER_HINT and not User.objects.exists()
+        # Tofu (2026-10-25): see LD_INITIAL_SUPERUSER_HINT in settings/base.py. While there is no account, the page
+        # says how the first one is made; once there is one, and until somebody has signed in, which username and
+        # password to sign in with (an owner who saved the password before first opening the copy sees only this).
+        hint = settings.LD_INITIAL_SUPERUSER_HINT
+        context["initial_superuser_hint"] = hint and not User.objects.exists()
+        context["first_sign_in_hint"] = (
+            hint
+            and not context["initial_superuser_hint"]
+            and not User.objects.filter(last_login__isnull=False).exists()
         )
         # The name tofu-entrypoint.sh gives the first account
         context["initial_superuser_name"] = os.getenv("LD_SUPERUSER_NAME") or "admin"

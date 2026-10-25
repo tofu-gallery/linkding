@@ -84,5 +84,6 @@ LD_DISABLE_PREVIEW_IMAGES = True
 
 # A copy does not follow upstream, so the settings page does not ask GitHub for upstream's latest release.
 LD_DISABLE_VERSION_CHECK = True
-# While there is no account yet, the login page tells the copy's owner how to make the first one.
+# While there is no account yet, the login page tells the copy's owner how to make the first one; then, until somebody
+# has signed in, which username and password to sign in with.
 LD_INITIAL_SUPERUSER_HINT = True

@@ -5,6 +5,7 @@
 import os
 from unittest.mock import patch
 
+from django.contrib.auth.models import User
 from django.core.management import call_command
 from django.test import TestCase, override_settings
 from django.urls import reverse
@@ -112,9 +113,17 @@ class TofuSwitchesTestCase(TestCase, BookmarkFactoryMixin):
         finally:
             get_version_info.cache_clear()
 
+    def login_page(self):
+        return self.client.get(reverse("login")).content.decode()
+
     def test_login_page_has_no_hint_by_default(self):
-        html = self.client.get(reverse("login")).content.decode()
+        self.assertNotIn("has no account yet", self.login_page())
+
+        self.get_or_create_test_user()
+        html = self.login_page()
         self.assertNotIn("has no account yet", html)
+        self.assertNotIn("Nobody has signed in", html)
+        self.assertNotIn("LD_SUPERUSER", html)
 
     @override_settings(LD_INITIAL_SUPERUSER_HINT=True)
     def test_login_page_hint_until_there_is_an_account(self):
@@ -131,6 +140,48 @@ class TofuSwitchesTestCase(TestCase, BookmarkFactoryMixin):
         self.get_or_create_test_user()
         html = self.client.get(reverse("login")).content.decode()
         self.assertNotIn("has no account yet", html)
+
+    @override_settings(LD_INITIAL_SUPERUSER_HINT=True)
+    def test_login_page_names_the_account_until_somebody_signs_in(self):
+        # The owner saved LD_SUPERUSER_PASSWORD before first opening the copy, so the start made the account at once.
+        user = User.objects.create_superuser("admin", None, "a long throwaway password")
+        html = self.login_page()
+        self.assertNotIn("has no account yet", html)
+        self.assertIn("Nobody has signed in to this linkding yet", html)
+        self.assertIn("username <code>admin</code>", html)
+        self.assertIn("<code>LD_SUPERUSER_NAME</code>", html)
+        self.assertIn("<code>LD_SUPERUSER_PASSWORD</code>", html)
+        self.assertIn("That makes a second administrator", " ".join(html.split()))
+
+        # A mistyped password: upstream's 401, and the hint with the way back stays.
+        response = self.client.post(
+            reverse("login"), {"username": "admin", "password": "mistyped"}
+        )
+        self.assertEqual(response.status_code, 401)
+        self.assertIn("Nobody has signed in to this linkding yet", response.content.decode())
+
+        response = self.client.post(
+            reverse("login"),
+            {"username": "admin", "password": "a long throwaway password"},
+        )
+        self.assertEqual(response.status_code, 302)
+        user.refresh_from_db()
+        self.assertIsNotNone(user.last_login)
+
+        self.client.logout()
+        html = self.login_page()
+        self.assertNotIn("has no account yet", html)
+        self.assertNotIn("Nobody has signed in", html)
+        self.assertNotIn("LD_SUPERUSER", html)
+
+    @override_settings(LD_INITIAL_SUPERUSER_HINT=True)
+    def test_login_page_never_shows_a_saved_username(self):
+        # Only the documented default appears; a name the owner saved stays on their Keys & settings page.
+        with patch.dict(os.environ, {"LD_SUPERUSER_NAME": "frank"}):
+            User.objects.create_superuser("frank", None, "a long throwaway password")
+            html = self.login_page()
+        self.assertIn("Nobody has signed in to this linkding yet", html)
+        self.assertNotIn("frank", html)
 
     def test_close_data_api_does_nothing_without_postgresql(self):
         call_command("tofu_close_data_api")

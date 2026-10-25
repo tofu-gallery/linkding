@@ -18,6 +18,21 @@
           and sign in here with the username <code>{{ initial_superuser_name }}</code> and that password.
         </p>
       </div>
+    {% elif first_sign_in_hint %}
+      <div class="toast mb-4" role="status">
+        <p>Nobody has signed in to this linkding yet.</p>
+        <p class="mt-2">
+          If it is your copy on Tofu, sign in with the username <code>admin</code> (or the <code>LD_SUPERUSER_NAME</code>
+          you saved) and the password you saved as <code>LD_SUPERUSER_PASSWORD</code>.
+        </p>
+        <p class="mt-2">
+          If that password does not work: a hidden value cannot be shown again, and saving a new
+          <code>LD_SUPERUSER_PASSWORD</code> alone changes nothing once the account exists. Save a new username as
+          <code>LD_SUPERUSER_NAME</code> together with a new password as <code>LD_SUPERUSER_PASSWORD</code>, with
+          <b>Hide this value after saving</b> on, deploy the app again and sign in with those. That makes a second
+          administrator, who can set the first account's password under <b>Admin</b>, Users.
+        </p>
+      </div>
     {% endif %}
     {% if not disable_login %}
       <form method="post" action="{% url 'login' %}">
