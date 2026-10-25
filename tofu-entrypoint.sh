@@ -2,7 +2,7 @@
 # Tofu (2026-10-25): this file is Tofu's addition; it is not part of upstream linkding.
 #
 # Starts a copy of linkding on Tofu (the Dockerfile's CMD). It does what upstream's bootstrap.sh does, with Tofu's
-# settings (bookmarks/settings/custom.py), which read the database from DATABASE_URL:
+# settings (bookmarks/settings/tofu.py, which the image names), which read the database from DATABASE_URL:
 #   1. PORT, which Tofu sets (80 without it), becomes LD_SERVER_PORT, and the server listens on all IPv4 addresses
 #      (LD_SERVER_HOST 0.0.0.0) unless LD_SERVER_HOST is set.
 #   2. `manage.py migrate` brings the database up to date. Tofu's database is new on the first start, so a failure is

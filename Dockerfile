@@ -5,8 +5,9 @@
 # installs the locked dependencies (with PostgreSQL's driver built against libpq, and uwsgi), and the final image
 # collects the static files. Left out: the SQLite ICU extension (a copy keeps its data in PostgreSQL), the health check
 # (Tofu checks the address itself), uv's install script (uv comes from PyPI, pinned) and the "plus" image's Chromium.
-# tofu-entrypoint.sh applies the migrations, then starts the web server and the background tasks on PORT, as root
-# (uwsgi's workers then run as www-data, as upstream's uwsgi.ini says).
+# Its settings are bookmarks/settings/tofu.py (upstream's production settings, then Tofu's). tofu-entrypoint.sh applies
+# the migrations, then starts the web server and the background tasks on PORT, as root (uwsgi's workers then run as
+# www-data, as upstream's uwsgi.ini says).
 FROM node:22-alpine AS node-build
 WORKDIR /etc/linkding
 COPY package.json package-lock.json ./
@@ -40,7 +41,7 @@ COPY . .
 ENV VIRTUAL_ENV=/etc/linkding/.venv \
     PATH="/etc/linkding/.venv/bin:$PATH" \
     PYTHONUNBUFFERED=1 \
-    DJANGO_SETTINGS_MODULE=bookmarks.settings.prod \
+    DJANGO_SETTINGS_MODULE=bookmarks.settings.tofu \
     UWSGI_MAX_FD=4096
 # Upstream's .dockerignore already leaves out the development settings; removing them here too makes sure that
 # bookmarks.settings can never fall back to them (DEBUG on).

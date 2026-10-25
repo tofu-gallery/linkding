@@ -307,7 +307,7 @@ LD_ENABLE_REFRESH_FAVICONS = os.getenv("LD_ENABLE_REFRESH_FAVICONS", True) in (
     "1",
 )
 
-# Tofu (2026-10-25): switches for Tofu's gallery copy, which custom.py turns on (see TOFU.md). Off, as here, linkding
+# Tofu (2026-10-25): switches for Tofu's gallery copy, which settings/tofu.py turns on (see TOFU.md). Off, as here, linkding
 # behaves as upstream does. LD_DISABLE_FAVICONS and LD_DISABLE_PREVIEW_IMAGES leave the profile settings out and load
 # nothing, for a server without a lasting disk; LD_DISABLE_VERSION_CHECK keeps the settings page from asking GitHub for
 # the latest release; LD_INITIAL_SUPERUSER_HINT has the login page say how the first account is made while there is none.
