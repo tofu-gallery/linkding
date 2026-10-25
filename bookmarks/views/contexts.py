@@ -233,8 +233,14 @@ class BookmarkListContext:
         self.show_edit_action = user_profile.display_edit_bookmark_action
         self.show_archive_action = user_profile.display_archive_bookmark_action
         self.show_remove_action = user_profile.display_remove_bookmark_action
-        self.show_favicons = user_profile.enable_favicons
-        self.show_preview_images = user_profile.enable_preview_images
+        # Tofu (2026-10-25): nothing shows when LD_DISABLE_FAVICONS or LD_DISABLE_PREVIEW_IMAGES is on.
+        self.show_favicons = (
+            user_profile.enable_favicons and not settings.LD_DISABLE_FAVICONS
+        )
+        self.show_preview_images = (
+            user_profile.enable_preview_images
+            and not settings.LD_DISABLE_PREVIEW_IMAGES
+        )
         self.show_notes = user_profile.permanent_notes
         self.collapse_side_panel = user_profile.collapse_side_panel
         self.is_preview = False
@@ -585,8 +591,16 @@ class BookmarkDetailsContext:
         self.profile = request.user_profile
         self.is_editable = bookmark.owner == user
         self.sharing_enabled = user_profile.enable_sharing
-        self.preview_image_enabled = user_profile.enable_preview_images
-        self.show_link_icons = user_profile.enable_favicons and bookmark.favicon_file
+        # Tofu (2026-10-25): nothing shows when LD_DISABLE_FAVICONS or LD_DISABLE_PREVIEW_IMAGES is on.
+        self.preview_image_enabled = (
+            user_profile.enable_preview_images
+            and not settings.LD_DISABLE_PREVIEW_IMAGES
+        )
+        self.show_link_icons = (
+            user_profile.enable_favicons
+            and bookmark.favicon_file
+            and not settings.LD_DISABLE_FAVICONS
+        )
         self.snapshots_enabled = settings.LD_ENABLE_SNAPSHOTS
         self.uploads_enabled = not settings.LD_DISABLE_ASSET_UPLOAD
 

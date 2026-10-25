@@ -109,12 +109,20 @@ def _schedule_bookmarks_without_snapshots_task(user_id: int):
 def is_favicon_feature_active(user: User) -> bool:
     background_tasks_enabled = not settings.LD_DISABLE_BACKGROUND_TASKS
 
-    return background_tasks_enabled and user.profile.enable_favicons
+    # Tofu (2026-10-25): LD_DISABLE_FAVICONS (see settings/base.py) loads no favicon.
+    return (
+        background_tasks_enabled
+        and user.profile.enable_favicons
+        and not settings.LD_DISABLE_FAVICONS
+    )
 
 
 def is_preview_feature_active(user: User) -> bool:
+    # Tofu (2026-10-25): LD_DISABLE_PREVIEW_IMAGES (see settings/base.py) loads no preview image.
     return (
-        user.profile.enable_preview_images and not settings.LD_DISABLE_BACKGROUND_TASKS
+        user.profile.enable_preview_images
+        and not settings.LD_DISABLE_BACKGROUND_TASKS
+        and not settings.LD_DISABLE_PREVIEW_IMAGES
     )
 
 

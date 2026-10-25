@@ -1,4 +1,5 @@
 from django import forms
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.db import models
 from django.utils import timezone
@@ -368,6 +369,15 @@ class UserProfileForm(forms.ModelForm):
             "default_mark_unread": FormCheckbox,
             "default_mark_shared": FormCheckbox,
         }
+
+    # Tofu (2026-10-25): with LD_DISABLE_FAVICONS or LD_DISABLE_PREVIEW_IMAGES on (see settings/base.py), the form
+    # leaves that setting out, so a profile keeps it off.
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if settings.LD_DISABLE_FAVICONS:
+            del self.fields["enable_favicons"]
+        if settings.LD_DISABLE_PREVIEW_IMAGES:
+            del self.fields["enable_preview_images"]
 
 
 class GlobalSettingsForm(forms.ModelForm):

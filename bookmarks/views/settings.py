@@ -55,6 +55,9 @@ def general(request: HttpRequest, status=200, context_overrides=None):
             "form": profile_form,
             "global_settings_form": global_settings_form,
             "enable_refresh_favicons": enable_refresh_favicons,
+            # Tofu (2026-10-25): see LD_DISABLE_FAVICONS and LD_DISABLE_PREVIEW_IMAGES in settings/base.py.
+            "favicons_available": not django_settings.LD_DISABLE_FAVICONS,
+            "preview_images_available": not django_settings.LD_DISABLE_PREVIEW_IMAGES,
             "has_snapshot_support": has_snapshot_support,
             "success_message": success_message,
             "error_message": error_message,
@@ -138,6 +141,10 @@ def update_global_settings(request):
 # Cache API call response, for one hour when using get_ttl_hash with default params
 @lru_cache(maxsize=1)
 def get_version_info(ttl_hash=None):
+    # Tofu (2026-10-25): with LD_DISABLE_VERSION_CHECK on (see settings/base.py), GitHub is not asked.
+    if django_settings.LD_DISABLE_VERSION_CHECK:
+        return app_version
+
     latest_version = None
     try:
         latest_version_url = (
