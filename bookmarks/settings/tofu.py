@@ -8,6 +8,7 @@
 # ruff: noqa
 import hashlib
 import os
+import pwd
 from urllib.parse import parse_qsl, unquote, urlsplit
 
 from .prod import *
@@ -55,6 +56,44 @@ if _database_url and not os.getenv("LD_DB_ENGINE"):
         LD_DB_ENGINE = "postgres"
         USE_SQLITE = False
         USE_SQLITE_ICU_EXTENSION = False
+
+
+# Tofu (2026-10-26): whenever libpq opens a TLS connection (sslmode=require makes every connection TLS), it first looks
+# for a client certificate: the file sslcert or PGSSLCERT names, or else ~/.postgresql/postgresql.crt, where the image's
+# libpq (Debian's 17) takes ~ from HOME. It goes on without one when that file does not exist, but any other error stops
+# the connection. uwsgi's workers run as www-data with the container's HOME, /root, which www-data cannot search, so
+# every page that read the database answered 500 with `could not open certificate file
+# "/root/.postgresql/postgresql.crt": Permission denied`. So unless a client certificate is named, or the process
+# reading these settings finds one at that default place, sslcert names a file that does not exist, in linkding's own
+# settings folder (every process that runs linkding can search it: linkding's code is read from it), and libpq goes on
+# without a client certificate, exactly as when the default file is absent. This holds for every process that connects
+# through these settings, whatever its user and HOME: uwsgi's workers (uwsgi reads them once it has dropped to
+# www-data), the background tasks and any manage.py command, and also for a process that reads them as root before it
+# drops to another user. libpq reads a client key only once it has found a certificate, so sslkey and PGSSLKEY are
+# left alone. A certificate the owner names (sslcert in DATABASE_URL or LD_DB_OPTIONS, PGSSLCERT) or keeps at the
+# default place under a HOME the process can read is used as before, and TLS itself is unchanged: sslmode and the
+# checks of the server's certificate stay as they are.
+def _client_certificate_options():
+    if os.getenv("PGSSLCERT"):
+        return {}
+    try:
+        home = os.getenv("HOME") or pwd.getpwuid(os.geteuid()).pw_dir
+        os.stat(os.path.join(home, ".postgresql", "postgresql.crt"))
+        return {}
+    except (KeyError, OSError):
+        here = os.path.dirname(os.path.abspath(__file__))
+        return {"sslcert": os.path.join(here, "tofu-no-client-certificate.crt")}
+
+
+# Tofu's DATABASE_URL above, or upstream's LD_DB_ENGINE=postgres, which names Django's old alias for the same backend.
+if DATABASES["default"]["ENGINE"] in (
+    "django.db.backends.postgresql",
+    "django.db.backends.postgresql_psycopg2",
+):
+    DATABASES["default"]["OPTIONS"] = {
+        **_client_certificate_options(),
+        **DATABASES["default"].get("OPTIONS", {}),
+    }
 
 # Upstream keeps its secret key in data/secretkey.txt, and a copy has no lasting disk: every restart would make a new
 # key and sign everyone out. So the key is LD_SECRET_KEY when the owner saves one as a hidden value, and otherwise the
