@@ -24,6 +24,10 @@ class Command(BaseCommand):
         It only ever turns row-level security on, and only for linkding's tables (its models' tables and Django's
         migration record) that linkding's role owns and that do not have it yet. On a database without those roles, or
         one that is not PostgreSQL, it does nothing.
+
+        Tofu (2026-10-26): at a start, tofu_prepare_database runs it inside the transaction that holds the start's
+        advisory lock, after migrate, so the tables are never committed without it. It sends one query, and turns
+        row-level security on for every open table in one more round trip.
         """
         if connection.vendor != "postgresql":
             return
@@ -34,17 +38,12 @@ class Command(BaseCommand):
 
         with connection.cursor() as cursor:
             cursor.execute(
-                "SELECT EXISTS (SELECT 1 FROM pg_roles WHERE rolname IN ('anon', 'authenticated'))"
-            )
-            if not cursor.fetchone()[0]:
-                return
-
-            cursor.execute(
                 """
                 SELECT c.relname
                 FROM pg_class c
                 JOIN pg_namespace n ON n.oid = c.relnamespace
-                WHERE n.nspname = 'public'
+                WHERE EXISTS (SELECT 1 FROM pg_roles WHERE rolname IN ('anon', 'authenticated'))
+                  AND n.nspname = 'public'
                   AND c.relkind IN ('r', 'p')
                   AND NOT c.relrowsecurity
                   AND c.relowner = (SELECT oid FROM pg_roles WHERE rolname = current_user)
@@ -55,9 +54,16 @@ class Command(BaseCommand):
             )
             open_tables = [row[0] for row in cursor.fetchall()]
 
-            for name in open_tables:
+            if open_tables:
+                # Rows written earlier in the same transaction (at a start, Django's content types and permissions)
+                # leave their deferred foreign-key checks pending, and PostgreSQL alters no table while they are:
+                # SET CONSTRAINTS ALL IMMEDIATE runs them now, as Django's check_constraints() does.
                 cursor.execute(
-                    f"ALTER TABLE public.{connection.ops.quote_name(name)} ENABLE ROW LEVEL SECURITY"
+                    "SET CONSTRAINTS ALL IMMEDIATE; SET CONSTRAINTS ALL DEFERRED;"
+                    + "".join(
+                        f"ALTER TABLE public.{connection.ops.quote_name(name)} ENABLE ROW LEVEL SECURITY;"
+                        for name in open_tables
+                    )
                 )
 
         if open_tables:
