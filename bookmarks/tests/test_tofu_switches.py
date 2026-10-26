@@ -185,3 +185,18 @@ class TofuSwitchesTestCase(TestCase, BookmarkFactoryMixin):
 
     def test_close_data_api_does_nothing_without_postgresql(self):
         call_command("tofu_close_data_api")
+
+    def test_schema_snapshot_records_every_migration(self):
+        # Tofu (2026-10-26): tofu_prepare_database makes a new PostgreSQL database's tables from bookmarks/tofu_schema.sql
+        # and records the migrations it names as applied, so it has to name every migration of this version, and no
+        # other (scripts/tofu-schema-snapshot.sh writes it again after a change to the migrations).
+        from django.db import connection
+        from django.db.migrations.loader import MigrationLoader
+
+        from bookmarks.management.commands.tofu_prepare_database import (
+            snapshot_migrations,
+        )
+
+        on_disk = set(MigrationLoader(connection).disk_migrations)
+        self.assertEqual(len(on_disk), 76)
+        self.assertEqual(sorted(snapshot_migrations()), sorted(on_disk))
