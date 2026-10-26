@@ -595,6 +595,29 @@ ALTER TABLE ONLY public.django_admin_log
 ALTER TABLE ONLY public.django_admin_log
     ADD CONSTRAINT django_admin_log_user_id_c564eba6_fk_auth_user_id FOREIGN KEY (user_id) REFERENCES public.auth_user(id) DEFERRABLE INITIALLY DEFERRED;
 
+-- Row-level security, with no policy, on every table (TOFU.md, "The database's Data API").
+ALTER TABLE public.auth_group ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.auth_group_permissions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.auth_permission ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.auth_user ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.auth_user_groups ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.auth_user_user_permissions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.authtoken_token ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.bookmarks_apitoken ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.bookmarks_bookmark ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.bookmarks_bookmark_tags ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.bookmarks_bookmarkasset ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.bookmarks_bookmarkbundle ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.bookmarks_feedtoken ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.bookmarks_globalsettings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.bookmarks_tag ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.bookmarks_toast ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.bookmarks_userprofile ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.django_admin_log ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.django_content_type ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.django_migrations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.django_session ENABLE ROW LEVEL SECURITY;
+
 INSERT INTO public.django_migrations (app, name, applied) VALUES
 ('contenttypes', '0001_initial', now()),
 ('auth', '0001_initial', now()),

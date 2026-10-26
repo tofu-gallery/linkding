@@ -15,8 +15,8 @@ logger = logging.getLogger(__name__)
 LOCK_KEY = 7811896436176023143
 # How long a start waits for another start's schema step before it gives up; tofu-entrypoint.sh then tries again.
 LOCK_WAIT = "120s"
-# linkding's tables as its migrations leave a new database, with Django's record of those migrations
-# (scripts/tofu-schema-snapshot.sh makes it).
+# linkding's tables as its migrations leave a new database, with row-level security on each and Django's record of
+# those migrations (scripts/tofu-schema-snapshot.sh makes it).
 SNAPSHOT = Path(__file__).resolve().parents[2] / "tofu_schema.sql"
 # An object another start made first: unique_violation (two starts creating the same table or type), duplicate_table,
 # duplicate_object.
@@ -59,10 +59,10 @@ class Command(BaseCommand):
         own savepoint, commit together with everything else or not at all.
 
         After the lock, and only then, it reads what the database holds. A database with none of linkding's tables in
-        public gets them from the schema snapshot in one round trip instead of 76 migrations sent statement by statement;
-        then migrate applies whatever the snapshot does not record (on this version, nothing), Django adds its
-        content types and permissions, row-level security goes on for every table of linkding's, and the first
-        account is created once LD_SUPERUSER_NAME is set. A start that meets an object another start made first
+        public gets them from the schema snapshot in one round trip instead of 76 migrations sent statement by statement,
+        each with row-level security on; then migrate applies whatever the snapshot does not record (on this version,
+        nothing), Django adds its content types and permissions, row-level security goes on for any table of
+        linkding's still without it (tofu_close_data_api), and the first account is created once LD_SUPERUSER_NAME is set. A start that meets an object another start made first
         anyway, which the lock should never let happen, rolls back and tries the whole step once more.
         """
         call_command("generate_secret_key")
@@ -113,10 +113,12 @@ class Command(BaseCommand):
                     [tables],
                 )
                 if cursor.fetchone()[0]:
-                    cursor.execute(SNAPSHOT.read_text())
+                    snapshot = SNAPSHOT.read_text()
+                    cursor.execute(snapshot)
                     logger.info(
                         f"tofu-prepare: new database, made linkding's tables from its schema snapshot "
-                        f"({len(snapshot_migrations())} migrations)"
+                        f"({len(snapshot_migrations())} migrations, row-level security on "
+                        f"{snapshot.count('ENABLE ROW LEVEL SECURITY')} tables)"
                     )
 
             call_command("migrate", interactive=False)
